@@ -1,0 +1,733 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category/>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>ruby</interpreter>
+ <dsl-interpreter-name/>
+ <text>module MyMacro
+ 
+  include RBA
+
+  # Define all parameters
+  # unit is in namometers
+
+  waferD = 5.0e7 # 4inch wafer radius
+  topcellL = 2.36e7 # topcell size 2.36x2.36cm
+  lineW = 100 # lines width
+  lineLs = [100, 205, 310, 415, 520, 625, 730, 835, 940, 1045, 1150, 1255, 1360, 1465, 1570] # line lengths
+  lineG = 1000 # gap between lines
+  lineN = 20 # number of lines
+  colG = 1000 # gap between columns
+  subcellL = 30e3 # subcell length 30um
+  subcellN = 60 # number of subcells in both directions (60 for test, 600 for real one)
+  offset = subcellN*subcellL/2.0 # offset in order center the cell at the origin
+  crossW = 1000 # quarter cross width
+  crossL = 8000 # quarter cross length
+  # subcellMargin = 1300e3 # distance from topcell border to first subcell in both directions
+  lineArrayLeftMargin = 1700 # distance from the subcell left border to first line left border
+  lineArrayBottomMargin = 5000 # distance from the subcell top border to the first line top border
+  mag = 200 # magnification for the text
+  textPitch = 600 # pitch between numbers
+  columnsGap = 1000 # gap between columns of lines
+
+  # Initialization of the cells, cells names, and cells indexes
+  lineCellsNames = Hash.new
+  lineCellsIdxs = Hash.new
+  lineCells = Hash.new
+  lineColumnCellsNames = Hash.new
+  lineColumnCellsIdxs = Hash.new
+  lineColumnCells = Hash.new
+
+
+  ############################
+  # Layout and layers creation
+  ############################
+
+  # Create a new view with and empty layout
+  app = Application.instance  # The unique instance of the application KLayout.
+  mw = app.main_window  # The main window of the application KLayout.
+  layout = mw.create_layout(0).layout # A layout is a design. Here we create a new layout numbered 0.
+  lv = mw.current_view  # A layout view correspond to a tab in klayout.
+
+  # Create a new layer in that layout
+  l1_idx = layout.insert_layer( LayerInfo.new(1, 0) ) # Return the index of the newly created layer.
+  # Create a layer view for this layer
+  l1_node = LayerPropertiesNode.new # Create a layer properties node structure
+  l1_node.dither_pattern = 0  # Set the dither pattern (filling pattern) index
+  l1_node.fill_color = 0x82ba00 # Set the fill color (cf http://www.color-hex.com/)
+  l1_node.frame_color = 0x415d00  # Set the frame color
+  l1_node.width = 1 # Set the line width
+  l1_node.source_layer_index = l1_idx # Set the layer index specification that the shapes are taken from
+  lv.insert_layer( lv.end_layers, l1_node ) # Insert the given layer properties node into the list before the given position
+    # end_layers is the end iterator for the layers
+
+  ##########
+  # Design #
+  ##########
+  
+  # Number cells (in order to write numbers on the layout)
+  
+  # 1 #
+  oneIdx = layout.add_cell("1")
+  one = layout.cell(oneIdx)
+  one.shapes(l1_idx).insert(Box.new(1, 0, 4, 1))
+  one.shapes(l1_idx).insert(Box.new(2, 1, 3, 7))
+  one.shapes(l1_idx).insert(Box.new(1, 5, 2, 6))  
+  # 2 #
+  twoIdx = layout.add_cell("2")
+  two = layout.cell(twoIdx)
+  two.shapes(l1_idx).insert(Box.new(0, 0, 5, 1))
+  two.shapes(l1_idx).insert(Box.new(0, 1, 1, 3))
+  two.shapes(l1_idx).insert(Box.new(0, 3, 5, 4))
+  two.shapes(l1_idx).insert(Box.new(4, 4, 5, 6))
+  two.shapes(l1_idx).insert(Box.new(0, 6, 5, 7))
+  # 3 #
+  threeIdx = layout.add_cell("3")
+  three = layout.cell(threeIdx)
+  three.shapes(l1_idx).insert(Box.new(0, 0, 5, 1))
+  three.shapes(l1_idx).insert(Box.new(4, 1, 5, 3))
+  three.shapes(l1_idx).insert(Box.new(0, 3, 5, 4))
+  three.shapes(l1_idx).insert(Box.new(4, 4, 5, 6))
+  three.shapes(l1_idx).insert(Box.new(0, 6, 5, 7))  
+  # 4 #
+  fourIdx = layout.add_cell("4")
+  four = layout.cell(fourIdx)
+  four.shapes(l1_idx).insert(Box.new(0, 1, 5, 2))
+  four.shapes(l1_idx).insert(Box.new(0, 2, 1, 7))
+  four.shapes(l1_idx).insert(Box.new(2, 0, 3, 1))
+  four.shapes(l1_idx).insert(Box.new(2, 2, 3, 3))
+  # 5 #
+  fiveIdx = layout.add_cell("5")
+  five = layout.cell(fiveIdx)
+  five.shapes(l1_idx).insert(Box.new(0, 0, 5, 1))
+  five.shapes(l1_idx).insert(Box.new(4, 1, 5, 3))
+  five.shapes(l1_idx).insert(Box.new(0, 3, 5, 4))
+  five.shapes(l1_idx).insert(Box.new(0, 4, 1, 6))
+  five.shapes(l1_idx).insert(Box.new(0, 6, 5, 7)) 
+  # 6 #
+  sixIdx = layout.add_cell("6")
+  six = layout.cell(sixIdx)
+  six.shapes(l1_idx).insert(Box.new(0, 0, 5, 1))
+  six.shapes(l1_idx).insert(Box.new(4, 1, 5, 3))
+  six.shapes(l1_idx).insert(Box.new(0, 3, 5, 4))
+  six.shapes(l1_idx).insert(Box.new(0, 4, 1, 6))
+  six.shapes(l1_idx).insert(Box.new(0, 6, 5, 7)) 
+  six.shapes(l1_idx).insert(Box.new(0, 1, 1, 3))  
+  # 7 #
+  sevenIdx = layout.add_cell("7")
+  seven = layout.cell(sevenIdx)
+  seven.shapes(l1_idx).insert(Box.new(0, 5, 1, 6))
+  seven.shapes(l1_idx).insert(Box.new(0, 6, 5, 7))
+  seven.shapes(l1_idx).insert(Box.new(4, 0, 5, 7))
+  # 8 #
+  eightIdx = layout.add_cell("8")
+  eight = layout.cell(eightIdx)
+  eight.shapes(l1_idx).insert(Box.new(0, 0, 5, 1))
+  eight.shapes(l1_idx).insert(Box.new(4, 1, 5, 3))
+  eight.shapes(l1_idx).insert(Box.new(0, 3, 5, 4))
+  eight.shapes(l1_idx).insert(Box.new(0, 4, 1, 6))
+  eight.shapes(l1_idx).insert(Box.new(0, 6, 5, 7)) 
+  eight.shapes(l1_idx).insert(Box.new(0, 1, 1, 3))  
+  eight.shapes(l1_idx).insert(Box.new(4, 4, 5, 6))  
+  # 9 #
+  nineIdx = layout.add_cell("9")
+  nine = layout.cell(nineIdx)
+  nine.shapes(l1_idx).insert(Box.new(0, 0, 5, 1))
+  nine.shapes(l1_idx).insert(Box.new(4, 1, 5, 3))
+  nine.shapes(l1_idx).insert(Box.new(0, 3, 5, 4))
+  nine.shapes(l1_idx).insert(Box.new(0, 4, 1, 6))
+  nine.shapes(l1_idx).insert(Box.new(0, 6, 5, 7)) 
+  nine.shapes(l1_idx).insert(Box.new(4, 4, 5, 6))  
+  # 0 #
+  zeroIdx = layout.add_cell("0")
+  zero = layout.cell(zeroIdx)
+  zero.shapes(l1_idx).insert(Box.new(0, 0, 5, 1))
+  zero.shapes(l1_idx).insert(Box.new(0, 6, 5, 7))
+  zero.shapes(l1_idx).insert(Box.new(0, 1, 1, 6))
+  zero.shapes(l1_idx).insert(Box.new(4, 1, 5, 6))
+  
+  
+  # Create lines (15 different lengths)
+  # Create line cells
+  0.upto(lineLs.length-1) do |i|
+    lineCellsNames[i] = "lineL#{lineLs[i]}nm"
+    lineCellsIdxs[i] = layout.add_cell(lineCellsNames[i])
+    lineCells[i] = layout.cell(lineCellsIdxs[i])
+    x0 = 0.0
+    y0 = 0.0
+    x1 = lineLs[i]
+    y1 = lineW
+    lineCells[i].shapes(l1_idx).insert(Box.new(x0, y0, x1, y1))
+  end
+  
+  # Lines Columns #
+  #################
+  0.upto(lineLs.length-1) do |i|
+    lineColumnCellsNames[i] = "lineColumnL#{lineLs[i]}nm"
+    lineColumnCellsIdxs[i] = layout.add_cell(lineColumnCellsNames[i])
+    lineColumnCells[i] = layout.cell(lineColumnCellsIdxs[i])
+    x0 = 0
+    y0 = 0
+    dy = lineW + lineG
+    rows = lineN
+    cols = 1
+    lineColumn = CellInstArray.new(lineCellsIdxs[i],Trans.new(x0, y0), Point.new(0, 0), Point.new(0, dy), cols, rows)
+    lineColumnCells[i].insert(lineColumn)
+
+    # Write the number n at top of each column
+
+    # Define a complex transformation named t
+      # Magnification = 100
+      # Angle = 0
+      # No mirror
+      # Displacement lineN*(lineG+lineW) according y axis
+    t = CplxTrans.new(100, 0, false, DPoint.new( 0, lineN*(lineG+lineW))) 
+
+    case i
+      when 0
+        # insert the number 1 (cell index oneIdx) with the complex transformation t (￢ﾇﾒ at the top of the column)
+        # in the first column of lines
+        lineColumnCells[i].insert(CellInstArray.new(oneIdx, t))
+      when 1
+        # insert the number 2 (cell index twoIdx) with the complex transformation t
+        # (to put it at the top of the column) in the second column of lines
+        lineColumnCells[i].insert(CellInstArray.new(twoIdx, t))  
+      when 2
+        # and so on...
+        lineColumnCells[i].insert(CellInstArray.new(threeIdx, t))  
+      when 3
+        lineColumnCells[i].insert(CellInstArray.new(fourIdx, t))  
+      when 4
+        lineColumnCells[i].insert(CellInstArray.new(fiveIdx, t))  
+      when 5
+        lineColumnCells[i].insert(CellInstArray.new(sixIdx, t))  
+      when 6
+        lineColumnCells[i].insert(CellInstArray.new(sevenIdx, t))  
+      when 7
+        lineColumnCells[i].insert(CellInstArray.new(eightIdx, t))  
+      when 8
+        lineColumnCells[i].insert(CellInstArray.new(nineIdx, t))  
+      when 9
+        lineColumnCells[i].insert(CellInstArray.new(oneIdx, t))
+        # t2 is a translation to position the second number
+        t2 = CplxTrans.new(100, 0, false, DPoint.new( textPitch, lineN*(lineG+lineW))) 
+        lineColumnCells[i].insert(CellInstArray.new(zeroIdx, t2))
+      when 10
+        lineColumnCells[i].insert(CellInstArray.new(oneIdx, t))
+        t2 = CplxTrans.new(100, 0, false, DPoint.new( textPitch, lineN*(lineG+lineW)))
+        lineColumnCells[i].insert(CellInstArray.new(oneIdx, t2))   
+      when 11
+        lineColumnCells[i].insert(CellInstArray.new(oneIdx, t))
+        t2 = CplxTrans.new(100, 0, false, DPoint.new( textPitch, lineN*(lineG+lineW)))
+        lineColumnCells[i].insert(CellInstArray.new(twoIdx, t2))   
+      when 12
+        lineColumnCells[i].insert(CellInstArray.new(oneIdx, t))
+        t2 = CplxTrans.new(100, 0, false, DPoint.new( textPitch, lineN*(lineG+lineW)))
+        lineColumnCells[i].insert(CellInstArray.new(threeIdx, t2))   
+      when 13
+        lineColumnCells[i].insert(CellInstArray.new(oneIdx, t))
+        t2 = CplxTrans.new(100, 0, false, DPoint.new( textPitch, lineN*(lineG+lineW)))
+        lineColumnCells[i].insert(CellInstArray.new(fourIdx, t2))  
+      when 14
+        lineColumnCells[i].insert(CellInstArray.new(oneIdx, t))
+        t2 = CplxTrans.new(100, 0, false, DPoint.new( textPitch, lineN*(lineG+lineW)))
+        lineColumnCells[i].insert(CellInstArray.new(fiveIdx, t2))   
+    end  
+  end
+
+  # Line Array
+  lineArrayCellName = "lineArray"
+  lineArrayCellIdx = layout.add_cell(lineArrayCellName)
+  lineArrayCell = layout.cell(lineArrayCellIdx)
+  shift = 0
+  0.upto(lineLs.length-1) do |i|
+    t = Trans.new(shift, 0) # translation by "shift" according to x axis
+    lineArrayCell.insert(CellInstArray.new(lineColumnCellsIdxs[i], t))
+    shift = shift + lineLs[i] + columnsGap
+  end  
+
+  # Quarter Cross (at the angle of each subcells)
+  crossCellNames = "QuaterCross"
+  crossCellIdx = layout.add_cell(crossCellNames)
+  crossCell = layout.cell(crossCellIdx)
+  crossCell.shapes(l1_idx).insert(Box.new(0, 0, 5000, 1000))
+  crossCell.shapes(l1_idx).insert(Box.new(0, 1000, 1000, 5000))
+
+  # Subcell 
+  subcellCellNames = "subcell"
+  subcellCellIdx = layout.add_cell(subcellCellNames)
+  subcellCell = layout.cell(subcellCellIdx)
+
+  # Add quarter crosses at each corner of the subcells
+  t = Trans.new(0, 0)
+  subcellCell.insert(CellInstArray.new(crossCellIdx, t))
+  t = Trans.new(1, mirr = false, subcellL, 0)
+  subcellCell.insert(CellInstArray.new(crossCellIdx, t))
+  t = Trans.new(2, mirr = false, subcellL, subcellL)
+  subcellCell.insert(CellInstArray.new(crossCellIdx, t))
+  t = Trans.new(3, mirr = false, 0, subcellL)
+  subcellCell.insert(CellInstArray.new(crossCellIdx, t))
+
+  # Add lines array
+  t = Trans.new(lineArrayLeftMargin, lineArrayBottomMargin)
+  subcellCell.insert(CellInstArray.new(lineArrayCellIdx, t))
+  
+  ##########
+  
+  # Chip ID cell
+  # Create the chip ID cell
+  chipIDIdx = layout.add_cell("chipID")
+  chipID = layout.cell(chipIDIdx)
+
+  # Write the subcell coordinates in each subcell
+  0.upto(subcellN-1) do |i|
+    0.upto(subcellN-1) do |j|
+      x0 = - offset + i*subcellL + subcellL/3
+      y0 = - offset + j*subcellL + 2000
+
+      # hyphen
+      chipID.shapes(l1_idx).insert(Box.new(x0+36*mag*5/10, y0+3*mag, x0+43*mag*5/10, y0+4*mag))
+
+      # columns numbers
+      if (i+1)/100 != 0
+          case (i+1)/100
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+          end
+      
+          case ((i+1)%100)/10
+            when 0
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(zeroIdx, t))
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+          end
+
+          case ((i+1)%100)%10
+            when 0
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(zeroIdx, t))
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+          end
+        end
+          
+      if (i+1)/10 != 0 and (i+1)/10 &lt; 10
+
+          case (i+1)/10
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+12*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+          end
+      
+          case (i+1)%10
+            when 0
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(zeroIdx, t))
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+          end
+
+
+        elsif (i+1)/10 == 0
+          case i+1
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+24*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+            end
+        end
+
+      # lines numbers
+      if (j+1)/100 != 0
+          case (j+1)/100
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+48*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+48*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+48*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+48*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+48*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+48*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+48*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+48*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+48*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+          end
+      
+          case ((j+1)%100)/10
+            when 0
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(zeroIdx, t))
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+          end
+
+          case ((j+1)%100)%10
+            when 0
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(zeroIdx, t))
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+          end
+        end
+          
+      if (j+1)/10 != 0 and (j+1)/10 &lt; 10
+
+          case (j+1)/10
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/100, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+60*mag*5/100, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+          end
+      
+          case (j+1)%10
+            when 0
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(zeroIdx, t))
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+          end
+
+
+        elsif (j+1)/10 == 0
+          case i+1
+            when 1
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(oneIdx, t))
+            when 2
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(twoIdx, t))
+            when 3
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(threeIdx, t))
+            when 4
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fourIdx, t))
+            when 5
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(fiveIdx, t))
+            when 6
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sixIdx, t))
+            when 7
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(sevenIdx, t))
+            when 8
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(eightIdx, t))
+            when 9
+              t = CplxTrans.new(mag, 0, false, DPoint.new( x0+72*mag*5/10, y0))
+              chipID.insert(CellInstArray.new(nineIdx, t))
+            end
+        end      
+    end
+  end
+
+  # TOP cell
+  # Create top cell
+  topIdx = layout.add_cell("TOP")
+  top = layout.cell(topIdx)
+  # Create subcells array
+  x0 = - offset
+  y0 = - offset
+  dx = subcellL
+  dy = subcellL
+  rows = subcellN
+  cols = subcellN
+  subcellArray = CellInstArray.new(subcellCellIdx, DTrans.new(x0, y0), Point.new(dx, 0), Point.new(0, dy), cols, rows)
+  # Insert subcells array in the top cell
+  top.insert(subcellArray)
+  # Insert chip ID subcell in the top cell
+  t = Trans.new(0, 0)
+  top.insert(CellInstArray.new(chipIDIdx, t))
+  #Alignment marks
+  top.shapes(l1_idx).insert(Box.new(-topcellL/2+1e5, -topcellL/2+1e5, -topcellL/2+1e6, -topcellL/2+1e6))
+  top.shapes(l1_idx).insert(Box.new(-topcellL/2+1e5, topcellL/2-1e5, -topcellL/2+1e6, topcellL/2-1e6))
+  top.shapes(l1_idx).insert(Box.new(topcellL/2-1e5, -topcellL/2+1e5, topcellL/2-1e6, -topcellL/2+1e6))
+  top.shapes(l1_idx).insert(Box.new(topcellL/2-1e5, topcellL/2-1e5, topcellL/2-1e6, topcellL/2-1e6))
+
+  # Create a circle representing the wafer in the top cell, in the annotation layer
+  # circle(top, l2idx, 0, 0, waferD, 100)
+
+lv.select_cell_path( [topIdx], 0 )
+lv.add_missing_layers
+lv.update_content
+lv.zoom_fit
+lv.max_hier
+
+end
+
+
+</text>
+</klayout-macro>

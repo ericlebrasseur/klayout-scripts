@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category/>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>ruby</interpreter>
+ <dsl-interpreter-name/>
+ <text>module MyMacro
+
+  include RBA # RBA is the Klayout integrated Ruby API
+
+  ############################
+  # Define global parameters #
+  ############################
+  c = 2300 # connector edge in um
+  r = ( ( 3 + Math::sqrt(2) ) / 2 ) * c # radius of the sphere in um
+  l1 = 0.278781 * r
+  l2 = 0.355850 * r
+  
+
+  ##############################
+  # Layout and layers creation #
+  ##############################
+
+  # Create a new view with and empty layout
+  app = Application.instance  # The unique instance of the application KLayout.
+  main_window = app.main_window  # The main window of the application KLayout.
+  layout = main_window.create_layout(0).layout # A layout is a design. Here we create a new layout numbered 0.
+  layout.dbu = 0.001  # layout database unit 1nm
+  layout_view = main_window.current_view  # A layout view correspond to a tab in klayout.
+  
+  # Create a new layer in that layout
+  layer1 = LayerInfo.new(1, 0) # create a new layer
+  layer1Idx = layout.insert_layer( layer1 ) # Return the index of the newly created layer.
+
+  ##########
+  # Design #
+  ##########
+
+  # Create the top cell
+  topCellIdx = layout.add_cell("top")
+  topCell = layout.cell(topCellIdx)
+  
+  # connector cell
+  connectorCellIdx = layout.add_cell("connector")
+  connectorCell = layout.cell(connectorCellIdx)
+  connectorCell.shapes(layer1Idx).insert(Box.new(0, 0, c, c)) 
+  
+  # l2 cell
+  l2CellIdx = layout.add_cell("l2")
+  l2Cell = layout.cell(l2CellIdx)
+  l2Cell.shapes(layer1Idx).insert(Box.new(0, 0, l2, c))
+  
+  # l1 cell
+  l1CellIdx = layout.add_cell("l1")
+  l1Cell = layout.cell(l1CellIdx)
+  l1Cell.shapes(layer1Idx).insert(Box.new(0, 0, c, l1))
+  
+  # l1 cell rotated by 60°
+  l1rot60CellIdx = layout.add_cell("l1rot60")
+  l1rot60Cell = layout.cell(l1rot60CellIdx)
+  poly = [ RBA::Point::new(0, 0),
+          RBA::Point::new(c/2, c*Math::sin(60*Math::PI/180)),
+          RBA::Point::new(c/2-l1*Math::cos(30*Math::PI/180), c*Math::sin(60*Math::PI/180)+l1*Math::sin(30*Math::PI/180)), 
+          RBA::Point::new(-l1*Math::cos(30*Math::PI/180), l1*Math::sin(30*Math::PI/180)) ]
+  l1rot60Cell.shapes(layer1Idx).insert(Polygon.new(poly))
+  print(Math::sin(60*Math::PI/180))
+  
+  # triangle cell
+  triangleCellIdx = layout.add_cell("triangle")
+  triangleCell = layout.cell(triangleCellIdx)
+  poly = [ RBA::Point::new(0, 0),
+          RBA::Point::new(c, 0), 
+          RBA::Point::new(c/2, c*Math::sin(60*Math::PI/180)) ]
+  triangleCell.shapes(layer1Idx).insert(Polygon.new(poly))
+
+ 
+  
+  # insert various cells in top cell
+  
+  # insert connector cells
+  x, y, dx, dy, cols, rows  = 0, 0, c + l2, 0, 8, 1
+  topCell.insert(CellInstArray.new(connectorCellIdx, RBA::Trans::new(RBA::Trans::R0, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))
+  x, y, dx, dy, cols, rows  = c + l2, -(c + l2), 2 * (c + l2), 2 * (c + l2), 4, 2
+  topCell.insert(CellInstArray.new(connectorCellIdx, RBA::Trans::new(RBA::Trans::R0, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))  
+  x, y, dx, dy, cols, rows  = c + l2, -2*(c + l2), 2 * (c + l2), 2 * (c + l2), 1, 1
+  topCell.insert(CellInstArray.new(connectorCellIdx, RBA::Trans::new(RBA::Trans::R0, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))  
+  x, y, dx, dy, cols, rows  = 5*(c + l2), 2*(c + l2), 2*(c + l2), 2 * (c + l2), 1, 1
+  topCell.insert(CellInstArray.new(connectorCellIdx, RBA::Trans::new(RBA::Trans::R0, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))  
+
+  # insert l2 cells
+  x, y, dx, dy, cols, rows  = c, 0, c + l2, 0, 8, 1
+  topCell.insert(CellInstArray.new(l2CellIdx, RBA::Trans::new(RBA::Trans::R0, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))
+  x, y, dx, dy, cols, rows  = 2*c+l2, -(c+2*l2), 2*(c+l2), (c+l2), 4, 4
+  topCell.insert(CellInstArray.new(l2CellIdx, RBA::Trans::new(RBA::Trans::R90, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows)) 
+
+  # insert l1 cells
+  x, y, dx, dy, cols, rows  = 0, -l1, 2*(c+l2), c+l1, 4, 2
+  topCell.insert(CellInstArray.new(l1CellIdx, RBA::Trans::new(RBA::Trans::R0, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))
+  # top left cells
+  x, y, dx, dy, cols, rows  = 0, c+l1, 2*(c+l2), 0, 4, 1
+  topCell.insert(CellInstArray.new(l1rot60CellIdx, RBA::Trans::new(RBA::Trans::R0, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))
+  # top right cells
+  x, y, dx, dy, cols, rows  = c, c+l1, 2*(c+l2), 0, 4, 1
+  topCell.insert(CellInstArray.new(l1rot60CellIdx, RBA::Trans::new(RBA::Trans::M90, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))
+  # bottom left cells
+  x, y, dx, dy, cols, rows  = 0, -l1, 2*(c+l2), 0, 4, 1
+  topCell.insert(CellInstArray.new(l1rot60CellIdx, RBA::Trans::new(RBA::Trans::M0, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))
+  # bottom right cells
+  x, y, dx, dy, cols, rows  = c, -l1, 2*(c+l2), 0, 4, 1
+  topCell.insert(CellInstArray.new(l1rot60CellIdx, RBA::Trans::new(RBA::Trans::R180, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))
+  
+  # insert triangle cells
+  x, y, dx, dy, cols, rows  = 0, c+l1, 2*(c+l2), 0, 4, 1
+  topCell.insert(CellInstArray.new(triangleCellIdx, RBA::Trans::new(RBA::Trans::R0, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))
+  x, y, dx, dy, cols, rows  = 0, -l1, 2*(c+l2), 0, 4, 1
+  topCell.insert(CellInstArray.new(triangleCellIdx, RBA::Trans::new(RBA::Trans::M0, x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))
+  
+  
+
+  # select top cell and fit to the window
+  layout_view.select_cell_path( [topCellIdx], 0 ) # Select a cell by cell index for a given cell view
+  layout_view.add_missing_layers # Add new layers to layer list
+  layout_view.update_content # Update the layout view to the current state
+  layout_view.zoom_fit # Fit the contents of the current view into the window
+  layout_view.max_hier # Select all hierarchy levels available
+  
+  # layout.write("C:/Users/Eric/Desktop/test.gds") # write to test.gds
+
+end
+
+</text>
+</klayout-macro>

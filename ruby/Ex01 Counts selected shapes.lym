@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <format>general</format>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>ruby</interpreter>
+ <text>#Counts all selected paths, boxes, polygons or text objects
+#Error when a PCell is selected
+
+module MyMacro
+#We put the whole script into our own namespace
+#Advantage : we can import the RBA namespace which makes life easier
+
+  include RBA
+#The RBA namespace contains all KLayout classes and constants
+
+#Access the layout view
+  app = Application.instance
+  #The Application class is a representative of the KLayout application
+  #Since there is only one application, it is a singleton
+  #The class method "instance" gives the singleton instance
+  #=&gt; "app" is a reference to the only Application object which is the main
+  #entrance to all internals of KLayout
+  mw = app.main_window
+  #The MainWindow object represents the application's window
+  #and manage the top level visual objects of the application.
+  #The main visual components of the main window are
+  #the menus, the tool panels and the layout views.
+  #The class method "main_window" gives access to the only one MainWindow
+  #=&gt; "mw" is a reference to the only one MainWindow
+
+  lv = mw.current_view
+  #The LayoutView object is a reference to the layout tab.
+  #This is the window to the layouts loaded into the tab.
+  #All related information such as the display settings, the zoom area,
+  # the layer properties, the cell shown, the hierarchy level etc, go here.
+  #A main window can display multiple tabs
+  # =&gt; there are multiple LayoutView objects available.
+  #the "current_view" method gives a reference to the currently selected tab.
+  # =&gt; "lv" is a reference to the LayoutObject associated with the current tab.
+  #If no layout is loaded, that method returns nil (the Ruby for "Nothing")
+  #The following code raise an error if no layout is loaded
+  if lv == nil
+    raise "Shape Statistics: No view selected"
+  end
+  
+  #The actual layouts loaded (layout objects) and the layout view objects
+  # are separate entities.
+  #There are many-to-many relationship between layout views and layout objects.
+  #A layout view may display multiple layouts and
+  # a layout may be displayed in multiple layout views.
+  #A layout view can address different cells from a layout.
+  #A layout view as a current cell and a path that leads to that cell.
+  #The path consist of a specific part which addresses a specific instance (the "context cell")
+  # and unspecific part (position in the tree).
+  
+  #Layout, current cell, context cell, specific and unspecific path
+  # are combined into the CellView object.
+  
+  #Here we don't need the CellView objects because we get all information
+  # directly from the LayoutView.
+  
+  #Setting the initial number of shapes
+  paths = 0
+  polygons = 0
+  boxes = 0
+  texts = 0
+
+  #In the following block, we ask the layout view for all selected objects
+  # and collect the objects counts.
+  lv.each_object_selected do |sel| 
+  #The method "each_object_selected" gives an iterator wich calls
+  # the given block for each selected object
+  #The selected objects may originate from different layouts,
+  # and the object may be selected in a child cell of the current cell
+  #=&gt; the selection is described by a cell view index, an instantiation path
+  # and the actual object selected. That information is combined into
+  # and ObjectInstPath object.
+  
+  #Here we are not interested by the cell view that shape lives in,
+  # neither by the instantiation path. All we need is the shape and
+  # we can obtain it with the "shape" method which deliver a "Shape" object
+  # which is some kind of pointer to the actual shape.
+  # It is either a polygon, a box, a text or a path.
+    shape = sel.shape
+
+    if shape.is_path? #"is_path?" method returns yes if the shape is a path object.
+      paths += 1
+    elsif shape.is_box? #same, etc.
+      boxes += 1
+    elsif shape.is_polygon?
+      polygons += 1
+    elsif shape.is_text?
+      texts += 1
+    end
+
+  end
+
+  #Create a message indicating the number of each shapes
+  s = "Paths: #{paths}\n"
+  s += "Polygons: #{polygons}\n"
+  s += "Boxes: #{boxes}\n"
+  s += "Texts: #{texts}\n"
+
+  #Show the message in a message box
+  MessageBox::info("Shape Statistics", s, MessageBox::Ok)
+  #MessageBox is a class that provides modal message dialogs through several class methods.
+  #"info" method shows an information box with the given title and message.
+  #The third parameter indicates which button will be shown. Here, one "Ok" button.
+  
+end
+</text>
+</klayout-macro>

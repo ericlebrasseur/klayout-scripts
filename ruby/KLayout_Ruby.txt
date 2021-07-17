@@ -1,0 +1,37 @@
+﻿
+Procedure to open the macro for KLayout:
+Open KLayout
+Macros → Macros Development (or F5 key)
+The Macro development window will open.
+In the left panel, right click → add location → select the folder were your macros are saved
+The folder will appear in the left panel.
+Click on the little triangle at the left of the folder → the macro file will appear.
+Double click on the macro file → the macro script will appear in the right panel
+Press the green triangle in the menu bar to run the macro. 
+
+
+
+=============
+RBA = Ruby API
+
+There are two style of programming:
+-Traditional Ruby Programming
+-Macro-based style (since version 0.22)
+--Macros = XML files containing Ruby code + info to link them to KLayout (executed at started or set in menus).
+--Preferred way of creating application extensions.
+
+**About Macro Development
+Since version 0.22, Klayout can read special macro files with the suffix ".lym".
+Those files are XML files that store the macro code + additional information (description text, flags...).
+Klayout looks for macro in the following places:
+-The "macros" folder in the installation path.
+-The "macros" folder in KLayout's user specific application folder.
+-Add locations by : right-click on the macro tree > add location
+Type of files supported by Klayout IDE:
+-".lym" : generic Klayout macros.
+-".rb" : plain Ruby files.
+-".txt"
+
+
+
+

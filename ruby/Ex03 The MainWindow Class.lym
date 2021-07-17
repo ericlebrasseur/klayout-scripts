@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <format>general</format>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>ruby</interpreter>
+ <text>module MyMacro
+ 
+  include RBA
+
+  #The MainWindow class represents the main application window.
+  #The main window instance can be obtained with :
+  
+  mw = Application.instance.main_window
+  
+  #This is the entry point to all user-interface related objects.
+  #Here are some methods
+  
+  mw.cancel
+  #Cancels any pending operation.
+  #Use this method to establish a known user interface state.
+  
+  mw.close_all
+  #Close all the tabs
+  
+  mw.close_current_view
+  #close the current tab
+  
+  l1 = mw.create_layout("Technology_Name", 1)
+  #Create a new layout and load it into a layout view.
+  #Parameters :
+  #Technology name
+  #Mode :
+  # 0=&gt;create in current view, replacing the current layout
+  # 1=&gt;create in a new view
+  # 2=&gt;adding to the current view
+
+  vi2 = mw.create_view
+  #Create a new, empty tab
+  #Returns the index of the view that was created
+  puts "Created view index : #{vi2}"
+
+  cv = mw.current_view
+  #returns a reference to a LayoutView object which represent the current tab
+  
+  cvi = mw.current_view_index
+  #Returns the index of the current tab
+  #The view index is the number of the tab (0 is the leftmost one)
+  
+  v2 = mw.view(vi2)
+  #gets the LayoutView object for a given tab index.
+
+  puts cv
+  puts v2
+  #those shoud be the same pointers
+
+  grid = mw.grid_micron
+  #gets the global grid in micrometers units
+  
+  puts mw.initial_technology
+  #Gets the technology used for creating or loading layouts
+
+  mw.initial_technology = "Default_Technology"
+  #Sets the technology used for creating or loading layouts
+  #It has an effect on the next load_layout or create_layout operation
+  # which does not explicitly specify the technology.
+  #Changes will be reset when the application is restarted.
+
+  l2 = mw.create_layout(1)
+  #Create a layout in a new tab with the Default_Technology  
+  
+  l3 = mw.create_layout("New_Technology", 2)
+  #Create a layout in the current tab with the New_Technology
+  cv = mw.current_view
+  
+  #v3 = mw.load_layout("Test.gds", 1)
+  #Loads a layout into a tab.
+  #Returns the cellview into which the layout was loaded
+  #Parameters :
+  #Technology name
+  #Mode :
+  # 0=&gt;load in current view, replacing the current layout
+  # 1=&gt;create in a new view
+  # 2=&gt;adding to the current view
+  
+  #puts cv
+  #puts v3
+  #Should be the same
+
+  menu = mw.menu
+  #Provides access to the menu object of class AbstractMenu
+  #This object provides access to the main menu, the toolbar 
+  # and various context menus.
+  #With this object it is possible to manipulate the menu.
+
+  time = 5 #a time in sec
+  mw.message("This is a message. I will be displayed for #{time} s",time*1000)
+  #Show a message in the status bar for the specified time  
+  
+  mw.save_session("Test_Session")
+  #Save the session in the folder
+  #"C:\Users\Eric\AppData\Roaming\KLayout (64bit)"
+  
+  mw.close_all
+
+  mw.restore_session("Test_Session")
+
+  mw.select_view(vi2)
+  # switch to the given tab
+  
+  puts "The number of tabs is : #{mw.views}"
+
+end
+</text>
+</klayout-macro>

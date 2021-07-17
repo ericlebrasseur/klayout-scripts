@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <format>general</format>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>ruby</interpreter>
+ <text>module MyMacro
+ 
+  include RBA
+
+  app = Application.instance #instance of the unique Application class
+  
+  #The application object is the main entry point into the API.
+  #It offers a couple of methods, in particular:
+  
+  app_path = app.application_data_path
+  #returns the user-local storage path
+  #this is where KLayout saves user specific files, like the configuration file
+  puts "The application data path is #{app_path}"  
+
+  app_exec = app.exec
+  #runs the application. Do nothing if the application is allready started.
+  #Normally this method is called implicitly when the application is started
+  #This method must be called in order to execute the application
+  # in the main script if a script is provided.
+  puts "The application .exec method returns #{app_exec}"
+
+  # app.exit(1)
+  # exits the application in a clean way. Needs an integer as argument.
+  
+  app_parameters = app.get_config_names
+  #Query the configuration parameters names
+  #Returns a list of configuration parameters names
+  puts "List of the configuration parameters names : #{app_parameters}"
+  
+  puts "List of name and valus of the configuration database parameters :"
+  app_parameters.each do |par| #iterate over the app_parameters list
+    app_config = app.get_config(par)
+    #Reads a parameter in the configuration database
+    #Returns the value of the parameter
+    puts "#{par} = #{app_config}"
+  end  
+
+  app.set_config("background-color", "black")
+  #Write in the configuration database
+  #The first string is the parameter name and the second string is the parameter value
+  puts "The background color is set to #{app.get_config("background-color")}"
+  app.set_config("background-color", "auto")
+  puts "The background color is set to #{app.get_config("background-color")}"
+  
+  app_path = app.inst_path
+  #Returns the installation path, that is where the executable is located
+  puts "The installation path is #{app_path}"
+
+  app_editable = app.is_editable?
+  #returns true if KLayout runs in editable mode
+  puts "It is #{app_editable} that KLayout is running in editable mode"
+  
+  #Returns the KLAYOUT_PATH value, which is the search path
+  #where KLayout looks for library files or macros.
+  puts "The KLAYOUT_PATH value is #{app.klayout_path}"
+  
+  puts "The pointer to the main window returns #{app.main_window}"
+
+  #app.process_events
+  #process pending events
+  
+  puts "KLayout's version is #{app.version}"
+
+  puts "Reading the configuration database 
+        of Test file returns #{app.read_config("Test.lym")}"
+  
+  puts "Writing the configuration database
+        of Test file returns #{app.write_config("Test.lym")}"
+
+  puts "This time, reading the configuration database 
+        of Test file returns #{app.read_config("Test.lym")}"
+
+end
+</text>
+</klayout-macro>

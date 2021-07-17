@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category/>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>ruby</interpreter>
+ <dsl-interpreter-name/>
+ <text>module MyMacro
+ 
+  include RBA # RBA is the Klayout integrated Ruby API
+
+  # Define all parameters
+  # unit is in namometers
+  
+  waferD = 5.0e7 # 4inch wafer diamaeter
+  topcellL = 2.36e7 # topcell size 2.36x2.36cm
+  subcellL = 5.0e5 # subcell size 500x500um
+  subcellG = 5.0e5 # subcell gap 500um
+  subcellNX = 18 # number of subcells in X direction
+  subcellNY = 18 # number of subcells in Y direction
+  offsetX = (subcellNX*(subcellL+subcellG)-subcellG)/2.0 # X offset in order center the cell at the origin
+  offsetY = (subcellNY*(subcellL+subcellG)-subcellG)/2.0 # Y offset in order center the cell at the origin
+  
+  squareLs = [50, 100, 150, 200, 250, 300, 350] # square length for pattern 1
+  square2Ls = [50, 60, 70, 80, 90, 100] # square length for patterns 3 and 5
+  square3Ls = [12000, 8000, 4000, 1000, 500] # square length for patterns 7 to 11
+  squareGs = [50, 100, 150, 200, 250, 300] # square gap for patterns 1
+  squareGs5 = [50, 100, 150, 200, 250, 300, 350] # square gap for patterns 5
+  square7Gs = [120, 240, 360, 480, 600, 720, 840, 960, 1080, 1200, 1320, 1440, 1560, 1680, 1800, 1920, 2040, 2160, 2280, 2400, 3600, 6000, 9000, 12000] # square gaps for patterns 7
+  square8Gs = [80,160,240,320,400,480,560,640,720,800,880,960,1040,1120,1200,1280,1360,1440,1520,1600,2400,4000,6000,8000] # square gaps for patterns 8
+  square9Gs = [40,80,120,160,200,240,280,320,360,400,440,480,520,560,600,640,680,720,760,800,1200,2000,3000,4000] # square gaps for patterns 9
+  square10Gs = [10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,300,500,750,1000] # square gaps for patterns 10
+  square11Gs = [35,40,45,50,55,60,65,70,75,80,85,90,95,100,150,250,375,500] # square gaps for patterns 11
+  square2CCs = [150, 300, 450, 600, 750, 900, 1050] # square Center to Center for pattern 3
+
+  # Initialization of the cells, cells names, and cells indexes
+  # We need to make lines of squares in order to facilitate BEF conversion
+  squareCellsNames = Hash.new
+  squareCellsIdxs = Hash.new
+  squareCells = Hash.new
+  square2CellsNames = Hash.new
+  square2CellsIdxs = Hash.new
+  square2Cells = Hash.new
+  square3CellsNames = Hash.new
+  square3CellsIdxs = Hash.new
+  square3Cells = Hash.new
+  subcell1CellsNames = Hash.new
+  subcell1CellsIdxs = Hash.new
+  subcell1Cells = Hash.new
+  subcell3CellsNames = Hash.new
+  subcell3CellsIdxs = Hash.new
+  subcell3Cells = Hash.new
+  subcell5CellsNames = Hash.new
+  subcell5CellsIdxs = Hash.new
+  subcell5Cells = Hash.new
+  subcell7CellsNames = Hash.new
+  subcell7CellsIdxs = Hash.new
+  subcell7Cells = Hash.new
+  subcell8CellsNames = Hash.new
+  subcell8CellsIdxs = Hash.new
+  subcell8Cells = Hash.new
+  subcell9CellsNames = Hash.new
+  subcell9CellsIdxs = Hash.new
+  subcell9Cells = Hash.new
+  subcell10CellsNames = Hash.new
+  subcell10CellsIdxs = Hash.new
+  subcell10Cells = Hash.new
+  subcell11CellsNames = Hash.new
+  subcell11CellsIdxs = Hash.new
+  subcell11Cells = Hash.new
+  line1Names = Hash.new
+  line1Idxs = Hash.new
+  line1 = Hash.new
+  line3Names = Hash.new
+  line3Idxs = Hash.new
+  line3 = Hash.new
+  line5Names = Hash.new
+  line5Idxs = Hash.new
+  line5 = Hash.new
+  line7Names = Hash.new
+  line7Idxs = Hash.new
+  line7 = Hash.new
+  line8Names = Hash.new
+  line8Idxs = Hash.new
+  line8 = Hash.new
+  line9Names = Hash.new
+  line9Idxs = Hash.new
+  line9 = Hash.new
+  line10Names = Hash.new
+  line10Idxs = Hash.new
+  line10 = Hash.new
+  line11Names = Hash.new
+  line11Idxs = Hash.new
+  line11 = Hash.new
+
+  ############################
+  # Layout and layers creation
+  ############################
+
+  # Create a new view with and empty layout
+  app = Application.instance  # The unique instance of the application KLayout.
+  mw = app.main_window  # The main window of the application KLayout.
+  layout = mw.create_layout(0).layout # A layout is a design. Here we create a new layout numbered 0.
+  lv = mw.current_view  # A layout view correspond to a tab in klayout.
+
+  # Create a new layer in that layout
+  l1_idx = layout.insert_layer( LayerInfo.new(1, 0) ) # Return the index of the newly created layer.
+  
+  # Create a layer view for that layer
+  l1_node = LayerPropertiesNode::new # Create a layer properties node structure
+  l1_node.dither_pattern = 0  # Set the dither pattern (filling pattern) index
+  l1_node.fill_color = 0x82ba00 # Set the fill color (cf http://www.color-hex.com/)
+  l1_node.frame_color = 0x415d00  # Set the frame color
+  l1_node.width = 1 # Set the line width
+  l1_node.source_layer_index = l1_idx # Set the layer index specification that the shapes are taken from
+  lv.insert_layer( lv.end_layers, l1_node ) # Insert the given layer properties node into the list before the given position
+    # end_layers is the end iterator for the layers
+  
+  ########
+  # Design
+  ########  
+  
+  # Create squares (side from 50nm to 350nm by 50nm) (for patterns 1)
+  # Create square cells
+  0.upto(squareLs.length-1) do |i|  # loop over squareLs hash
+    squareCellsNames[i] = "squareL#{squareLs[i]}nm" # Define square cells names
+    squareCellsIdxs[i] = layout.add_cell(squareCellsNames[i]) # Define square cells indexes
+    squareCells[i] = layout.cell(squareCellsIdxs[i])  # Define square cells
+    x0 = 0.0
+    y0 = 0.0
+    x1 = squareLs[i]
+    y1 = squareLs[i]
+    squareCells[i].shapes(l1_idx).insert(Box.new(x0, y0, x1, y1)) # Insert a box in the square cell, in layer view l1
+  end
+  
+  # Create squares (side from 50nm to 100nm by 10nm) (for patterns 3 and 5)
+  # Create square cells
+  0.upto(square2Ls.length-1) do |i|
+    square2CellsNames[i] = "square2L#{square2Ls[i]}nm"
+    square2CellsIdxs[i] = layout.add_cell(square2CellsNames[i])
+    square2Cells[i] = layout.cell(square2CellsIdxs[i])
+    x0 = 0.0
+    y0 = 0.0
+    x1 = square2Ls[i]
+    y1 = square2Ls[i]
+    square2Cells[i].shapes(l1_idx).insert(Box.new(x0, y0, x1, y1))
+  end
+
+  # Create squares (side from 12000nm, 8000nm, 4000nm, 1000nm and 500nm) (for patterns 7 and 11)
+  # Create square cells
+  0.upto(square3Ls.length-1) do |i|
+    square3CellsNames[i] = "square3L#{square3Ls[i]}nm"
+    square3CellsIdxs[i] = layout.add_cell(square3CellsNames[i])
+    square3Cells[i] = layout.cell(square3CellsIdxs[i])
+    x0 = 0.0
+    y0 = 0.0
+    x1 = square3Ls[i]
+    y1 = square3Ls[i]
+    square3Cells[i].shapes(l1_idx).insert(Box.new(x0, y0, x1, y1))
+  end
+  
+  # Subcells for pattern 1
+  0.upto(squareLs.length-1) do |i|
+    0.upto(squareGs.length-1) do |j|
+      # Lines (We need to make lines of squares in order to facilitate BEF conversion)
+      line1Names[[i,j]] = "line1_L#{squareLs[i]}nm_G#{(squareGs[j])}nm"
+      line1Idxs[[i,j]] = layout.add_cell(line1Names[[i,j]])
+      line1[[i,j]] = layout.cell(line1Idxs[[i,j]])
+      x0 = 0
+      y0 = 0
+      dx = squareLs[i] + squareGs[j]
+      dy = squareLs[i] + squareGs[j]
+      rows = (subcellL/dx).floor # number of lines in the subcell (cf. below)
+      cols = (subcellL/dy).floor # number of squares in the line array (cf. below)
+      line1_Array = CellInstArray.new(squareCellsIdxs[i],Trans.new(x0, y0), Point.new(dx, 0), Point.new(0, 0), cols, 1)
+      line1[[i,j]].insert(line1_Array) 
+        # create an array of square cell instances with a transformation without rotation (Trans.r0)
+        # dx : displacement according x axis
+        # no displacement according y axis
+        # number of columns : cols
+        # number of lines : 1
+      
+      subcell1CellsNames[[i,j]] = "subcell1_L#{squareLs[i]}nm_G#{(squareGs[j])}nm"
+      subcell1CellsIdxs[[i,j]] = layout.add_cell(subcell1CellsNames[[i,j]])
+      subcell1Cells[[i,j]] = layout.cell(subcell1CellsIdxs[[i,j]])
+      subcell1_Array = CellInstArray.new(line1Idxs[[i,j]],Trans.new(x0, y0), Point.new(0, 0), Point.new(0, dy), 1, rows)
+      subcell1Cells[[i,j]].insert(subcell1_Array)
+        # create an array of line cell instances with a transformation without rotation (Trans.r0)
+        # no displacement according x axis
+        # dy : displacement according y axis
+        # number of columns : 1
+        # number of lines : rows
+    end
+  end
+  
+  # Subcells for pattern 3
+  0.upto(square2CCs.length-1) do |i|
+    0.upto(square2Ls.length-1) do |j|
+      line3Names[[i,j]] = "line3_CC#{square2CCs[i]}nm_L#{(square2Ls[j])}nm"
+      line3Idxs[[i,j]] = layout.add_cell(line3Names[[i,j]])
+      line3[[i,j]] = layout.cell(line3Idxs[[i,j]])
+      x0 = 0
+      y0 = 0
+      dx = square2CCs[i]
+      dy = square2CCs[i]
+      rows = (subcellL/dx).floor
+      cols = (subcellL/dy).floor
+      line3_Array = CellInstArray.new(square2CellsIdxs[j],Trans.new(x0, y0), Point.new(dx, 0), Point.new(0, 0), cols, 1)
+      line3[[i,j]].insert(line3_Array)
+      
+      subcell3CellsNames[[i,j]] = "subcell3_CC#{square2CCs[i]}nm_L#{(square2Ls[j])}nm"
+      subcell3CellsIdxs[[i,j]] = layout.add_cell(subcell3CellsNames[[i,j]])
+      subcell3Cells[[i,j]] = layout.cell(subcell3CellsIdxs[[i,j]])
+      subcell3_Array = CellInstArray.new(line3Idxs[[i,j]],Trans.new(x0, y0), Point.new(0, 0), Point.new(0, dy), 1, rows)
+      subcell3Cells[[i,j]].insert(subcell3_Array)
+    end
+  end
+
+  # Subcells for pattern 5
+  0.upto(squareGs5.length-1) do |i|
+    0.upto(square2Ls.length-1) do |j|
+      line5Names[[i,j]] = "line5_G#{squareGs[i]}nm_L#{(square2Ls[j])}nm"
+      line5Idxs[[i,j]] = layout.add_cell(line5Names[[i,j]])
+      line5[[i,j]] = layout.cell(line5Idxs[[i,j]])
+      x0 = 0
+      y0 = 0
+      dx = squareGs5[i] + square2Ls[j]
+      dy = squareGs5[i] + square2Ls[j]
+      rows = (subcellL/dx).floor
+      cols = (subcellL/dy).floor
+      line5_Array = CellInstArray.new(square2CellsIdxs[j],Trans.new(x0, y0), Point.new(dx, 0), Point.new(0, 0), cols, 1)
+      line5[[i,j]].insert(line5_Array)
+      
+      subcell5CellsNames[[i,j]] = "subcell5_G#{squareGs[i]}nm_L#{(square2Ls[j])}nm"
+      subcell5CellsIdxs[[i,j]] = layout.add_cell(subcell5CellsNames[[i,j]])
+      subcell5Cells[[i,j]] = layout.cell(subcell5CellsIdxs[[i,j]])
+      subcell5_Array = CellInstArray.new(line5Idxs[[i,j]],Trans.new(x0, y0), Point.new(0, 0), Point.new(0, dy), 1, rows)
+      subcell5Cells[[i,j]].insert(subcell5_Array)
+    end
+  end
+
+  # Subcells for pattern 7 (square length = 12000nm)
+  j=0
+  0.upto(square7Gs.length-1) do |i|
+    line7Names[i] = "line7_L12000nm_G#{square7Gs[i]}nm"
+    line7Idxs[i] = layout.add_cell(line7Names[i])
+    line7[i] = layout.cell(line7Idxs[i])
+    x0 = 0
+    y0 = 0
+    dx = square7Gs[i] + square3Ls[j]
+    dy = square7Gs[i] + square3Ls[j]
+    rows = (subcellL/dx).floor
+    cols = (subcellL/dy).floor
+    line7_Array = CellInstArray.new(square3CellsIdxs[j],Trans.new(x0, y0), Point.new(dx, 0), Point.new(0, 0), cols, 1)
+    line7[i].insert(line7_Array)
+    
+    subcell7CellsNames[i] = "subcell7_L12000nm_G#{square7Gs[i]}nm"
+    subcell7CellsIdxs[i] = layout.add_cell(subcell7CellsNames[i])
+    subcell7Cells[i] = layout.cell(subcell7CellsIdxs[i])
+    subcell7_Array = CellInstArray.new(line7Idxs[i],Trans.new(x0, y0), Point.new(0, 0), Point.new(0, dy), 1, rows)
+    subcell7Cells[i].insert(subcell7_Array)
+  end
+
+  # Subcells for pattern 8 (square length = 8000nm)
+  j=1
+  0.upto(square8Gs.length-1) do |i|
+    line8Names[i] = "line8_L8000nm_G#{square8Gs[i]}nm"
+    line8Idxs[i] = layout.add_cell(line8Names[i])
+    line8[i] = layout.cell(line8Idxs[i])
+    x0 = 0
+    y0 = 0
+    dx = square8Gs[i] + square3Ls[j]
+    dy = square8Gs[i] + square3Ls[j]
+    rows = (subcellL/dx).floor
+    cols = (subcellL/dy).floor
+    line8_Array = CellInstArray.new(square3CellsIdxs[j],Trans.new(x0, y0), Point.new(dx, 0), Point.new(0, 0), cols, 1)
+    line8[i].insert(line8_Array)
+    
+    subcell8CellsNames[i] = "subcell8_L8000nm_G#{square8Gs[i]}nm"
+    subcell8CellsIdxs[i] = layout.add_cell(subcell8CellsNames[i])
+    subcell8Cells[i] = layout.cell(subcell8CellsIdxs[i])
+    subcell8_Array = CellInstArray.new(line8Idxs[i],Trans.new(x0, y0), Point.new(0, 0), Point.new(0, dy), 1, rows)
+    subcell8Cells[i].insert(subcell8_Array)
+  end
+
+  # Subcells for pattern 9 (square length = 4000nm)
+  j=2
+  0.upto(square9Gs.length-1) do |i|
+    line9Names[i] = "line9_L4000nm_G#{square9Gs[i]}nm"
+    line9Idxs[i] = layout.add_cell(line9Names[i])
+    line9[i] = layout.cell(line9Idxs[i])
+    x0 = 0
+    y0 = 0
+    dx = square9Gs[i] + square3Ls[j]
+    dy = square9Gs[i] + square3Ls[j]
+    rows = (subcellL/dx).floor
+    cols = (subcellL/dy).floor
+    line9_Array = CellInstArray.new(square3CellsIdxs[j],Trans.new(x0, y0), Point.new(dx, 0), Point.new(0, 0), cols, 1)
+    line9[i].insert(line9_Array)
+    
+    subcell9CellsNames[i] = "subcell9_L4000nm_G#{square9Gs[i]}nm"
+    subcell9CellsIdxs[i] = layout.add_cell(subcell9CellsNames[i])
+    subcell9Cells[i] = layout.cell(subcell9CellsIdxs[i])
+    subcell9_Array = CellInstArray.new(line9Idxs[i],Trans.new(x0, y0), Point.new(0, 0), Point.new(0, dy), 1, rows)
+    subcell9Cells[i].insert(subcell9_Array)
+  end
+
+  # Subcells for pattern 10 (square length = 1000nm)
+  j=3
+  0.upto(square10Gs.length-1) do |i|
+    line10Names[i] = "line10_L1000nm_G#{square10Gs[i]}nm"
+    line10Idxs[i] = layout.add_cell(line10Names[i])
+    line10[i] = layout.cell(line10Idxs[i])
+    x0 = 0
+    y0 = 0
+    dx = square10Gs[i] + square3Ls[j]
+    dy = square10Gs[i] + square3Ls[j]
+    rows = (subcellL/dx).floor
+    cols = (subcellL/dy).floor
+    line10_Array = CellInstArray.new(square3CellsIdxs[j],Trans.new(x0, y0), Point.new(dx, 0), Point.new(0, 0), cols, 1)
+    line10[i].insert(line10_Array)
+    
+    subcell10CellsNames[i] = "subcell10_L1000nm_G#{square10Gs[i]}nm"
+    subcell10CellsIdxs[i] = layout.add_cell(subcell10CellsNames[i])
+    subcell10Cells[i] = layout.cell(subcell10CellsIdxs[i])
+    subcell10_Array = CellInstArray.new(line10Idxs[i],Trans.new(Trans::R0, x0, y0), Point.new(0, 0), Point.new(0, dy), 1, rows)
+    subcell10Cells[i].insert(subcell10_Array)
+  end
+
+  # Subcells for pattern 11 (square length = 500nm)
+  j=4
+  0.upto(square11Gs.length-1) do |i|
+    line11Names[i] = "line11_L500nm_G#{square11Gs[i]}nm"
+    line11Idxs[i] = layout.add_cell(line11Names[i])
+    line11[i] = layout.cell(line11Idxs[i])
+    x0 = 0
+    y0 = 0
+    dx = square11Gs[i] + square3Ls[j]
+    dy = square11Gs[i] + square3Ls[j]
+    rows = (subcellL/dx).floor
+    cols = (subcellL/dy).floor
+    line11_Array = CellInstArray.new(square3CellsIdxs[j],Trans.new(x0, y0), Point.new(dx, 0), Point.new(0, 0), cols, 1)
+    line11[i].insert(line11_Array)
+    
+    subcell11CellsNames[i] = "subcell11_L500nm_G#{square11Gs[i]}nm"
+    subcell11CellsIdxs[i] = layout.add_cell(subcell11CellsNames[i])
+    subcell11Cells[i] = layout.cell(subcell11CellsIdxs[i])
+    subcell11_Array = CellInstArray.new(line11Idxs[i],Trans.new(x0, y0), Point.new(0, 0), Point.new(0, dy), 1, rows)
+    subcell11Cells[i].insert(subcell11_Array)
+  end
+      
+
+  # Create top cell
+  top_cell_idx = layout.add_cell("TOP") # Adds a cell with the given name. Returns the index of the newly created cell.
+  top_cell = layout.cell(top_cell_idx) # Gets a cell object from the cell index. Returns a reference to the cell (a Cell object).
+  
+  # insert design 1 in the top cell
+  k=0
+  0.upto(squareLs.length-1) do |i|
+    0.upto(squareGs.length-1) do |j|
+      # (k%18) is a trick to go back to the beginning of the line when 18 cells have been inserted
+      x0 = (k%18)*(subcellL + subcellG) - offsetX
+      y0 = -(k/18)*(subcellL + subcellG) - subcellL + offsetY
+      # instantiate the subcells
+        t = DTrans.new(x0, y0) # transformation without rotation
+        top_cell.insert(CellInstArray::new(subcell1CellsIdxs[[i,j]], t))
+    k = k+1 
+    end
+  end
+  
+  # insert design 3 in the top cell
+  k=0
+  0.upto(square2CCs.length-1) do |i|
+    0.upto(square2Ls.length-1) do |j|
+      x0 = (k%18)*(subcellL + subcellG) - offsetX
+      y0 = -(k/18+3)*(subcellL + subcellG) - subcellL + offsetY
+      # instantiate the subcells
+        t = DTrans.new(x0, y0)
+        top_cell.insert(CellInstArray::new(subcell3CellsIdxs[[i,j]], t))
+    k = k+1 
+    end
+  end
+  
+  # insert design 5 in the top cell
+  k = 0
+  0.upto(squareGs5.length-1) do |i|
+    0.upto(square2Ls.length-1) do |j|
+      x0 = (k%18)*(subcellL + subcellG) - offsetX
+      y0 = -(k/18+6)*(subcellL + subcellG) - subcellL + offsetY
+      # instantiate the subcells
+        t = DTrans.new(x0, y0)
+        top_cell.insert(CellInstArray::new(subcell5CellsIdxs[[i,j]], t))
+    k = k+1 
+    end
+  end
+
+  # insert design 7 in the top cell
+  k = 0
+  0.upto(square7Gs.length-1) do |i|
+    x0 = (k%18)*(subcellL + subcellG) - offsetX
+    y0 = -(k/18+9)*(subcellL + subcellG) - subcellL + offsetY
+    # instantiate the subcells
+        t = DTrans.new(x0, y0)
+      top_cell.insert(CellInstArray::new(subcell7CellsIdxs[i], t))
+  k = k+1 
+  end
+
+  # insert design 8 in the top cell
+  k = 0
+  0.upto(square8Gs.length-1) do |i|
+    x0 = (k%18)*(subcellL + subcellG) - offsetX
+    y0 = -(k/18+11)*(subcellL + subcellG) - subcellL + offsetY
+    # instantiate the subcells
+        t = DTrans.new(x0, y0)
+      top_cell.insert(CellInstArray::new(subcell8CellsIdxs[i], t))
+  k = k+1 
+  end
+
+  # insert design 9 in the top cell
+  k = 0
+  0.upto(square9Gs.length-1) do |i|
+    x0 = (k%18)*(subcellL + subcellG) - offsetX
+    y0 = -(k/18+13)*(subcellL + subcellG) - subcellL + offsetY
+    # instantiate the subcells
+        t = DTrans.new(x0, y0)
+      top_cell.insert(CellInstArray::new(subcell9CellsIdxs[i], t))
+  k = k+1 
+  end
+
+  # insert design 10 in the top cell
+  k = 0
+  0.upto(square10Gs.length-1) do |i|
+    x0 = (k%18)*(subcellL + subcellG) - offsetX
+    y0 = -(k/18+15)*(subcellL + subcellG) - subcellL + offsetY
+    # instantiate the subcells
+        t = DTrans.new(x0, y0)
+      top_cell.insert(CellInstArray::new(subcell10CellsIdxs[i], t))
+  k = k+1 
+  end
+
+  # insert design 11 in the top cell
+  k = 0
+  0.upto(square11Gs.length-1) do |i|
+    x0 = (k%18)*(subcellL + subcellG) - offsetX
+    y0 = -(k/18+17)*(subcellL + subcellG) - subcellL + offsetY
+    # instantiate the subcells
+        t = DTrans.new(x0, y0)
+      top_cell.insert(CellInstArray::new(subcell11CellsIdxs[i], t))
+  k = k+1 
+  end
+
+  #Alignment marks
+  d1 = 1e5 # distance from the border of the top cell of the big alignement marks
+  bam = 1e6 # big alignment marks size
+  sam = 5e4 # small alignment marks size
+  # draw big alignment marks
+  top_cell.shapes(l1_idx).insert(Box.new(-topcellL/2+d1, -topcellL/2+d1, -topcellL/2+(d1+bam), -topcellL/2+(d1+bam)))
+  top_cell.shapes(l1_idx).insert(Box.new(-topcellL/2+d1, topcellL/2-d1, -topcellL/2+(d1+bam), topcellL/2-(d1+bam)))
+  top_cell.shapes(l1_idx).insert(Box.new(topcellL/2-d1, -topcellL/2+d1, topcellL/2-(d1+bam), -topcellL/2+(d1+bam)))
+  top_cell.shapes(l1_idx).insert(Box.new(topcellL/2-d1, topcellL/2-d1, topcellL/2-(d1+bam), topcellL/2-(d1+bam)))
+  # draw small alignment marks (I added those marks to know the most outside cutting line exact position)
+  top_cell.shapes(l1_idx).insert(Box.new(-topcellL/2, -topcellL/2, -topcellL/2+(d1+bam), -topcellL/2+sam/2))
+  top_cell.shapes(l1_idx).insert(Box.new(-topcellL/2, topcellL/2, -topcellL/2+(d1+bam), topcellL/2-sam/2))
+  top_cell.shapes(l1_idx).insert(Box.new(topcellL/2, -topcellL/2, topcellL/2-(d1+bam), -topcellL/2+sam/2))
+  top_cell.shapes(l1_idx).insert(Box.new(topcellL/2, topcellL/2, topcellL/2-(d1+bam), topcellL/2-sam/2))
+  top_cell.shapes(l1_idx).insert(Box.new(-topcellL/2, -topcellL/2+sam/2, -topcellL/2+sam/2, -topcellL/2+(d1+bam)))
+  top_cell.shapes(l1_idx).insert(Box.new(-topcellL/2, topcellL/2-sam/2, -topcellL/2+sam/2, topcellL/2-(d1+bam)))
+  top_cell.shapes(l1_idx).insert(Box.new(topcellL/2, -topcellL/2+sam/2, topcellL/2-sam/2, -topcellL/2+(d1+bam)))
+  top_cell.shapes(l1_idx).insert(Box.new(topcellL/2, topcellL/2-sam/2, topcellL/2-sam/2, topcellL/2-(d1+bam)))
+ 
+  # select top cell and fit to the window
+  lv.select_cell_path( [top_cell_idx], 0 ) # Select a cell by cell index for a certain cell view
+  #lv.add_missing_layers # Add new layers to layer list. Seems not necessary here
+  lv.update_content # Update the layout view to the current state
+  lv.zoom_fit # Fit the contents of the current view into the window
+  lv.max_hier # Select all hierarchy levels available
+
+end
+
+</text>
+</klayout-macro>

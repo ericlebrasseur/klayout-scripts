@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category/>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>ruby</interpreter>
+ <dsl-interpreter-name/>
+ <text>module MyMacro
+
+  include RBA # RBA is the Klayout integrated Ruby API
+
+  ############################
+  # Define global parameters #
+  ############################
+  # unit is in namometers
+  circleD = [10000, 6000, 4000, 3000, 2000, 1000] # circles diameter defined in an array
+  gapx = 3000 # gap between circles in the line of circles
+  gapy = 2000 # gap between lines of circles
+  lineN = 4 # number of lines of circles
+
+  ##############################
+  # Layout and layers creation #
+  ##############################
+
+  # Create a new view with and empty layout
+  app = Application.instance  # The unique instance of the application KLayout.
+  mw = app.main_window  # The main window of the application KLayout.
+  layout = mw.create_layout(0).layout # A layout is a design. Here we create a new layout numbered 0.
+  layout.dbu = 0.001  # layout database unit 1nm
+  layout_view = mw.current_view  # A layout view correspond to a tab in klayout.
+  
+  # Create a new layer in that layout
+  layer1 = LayerInfo.new(1, 0) # create a new layer
+  layer1Idx = layout.insert_layer( layer1 ) # Return the index of the newly created layer.
+  
+  # write text
+  # find the library
+  text_library = Library.library_by_name("Basic")
+  text_library || raise("Unknown lib 'Basic'")
+  # find the pcell
+  text_declaration = text_library.layout.pcell_declaration("TEXT")
+  text_declaration || raise("Unknown PCell 'TEXT'")
+
+  ##########
+  # Design #
+  ##########
+
+  # Create the top cell
+  topCellIdx = layout.add_cell("top")
+  topCell = layout.cell(topCellIdx)
+  
+  # Create circle cells
+  # Initialization of the cells, cells names, and cells indexes  
+  circleCellsNames = Array.new # we define as an array as there will be one cell for each diameter defined in circleD array
+  circleCellsIdxs = Array.new
+  circleCells = Array.new
+  # Creation of a circle cell for each diameter in circleD array
+  0.upto(circleD.length-1) do |i|  # loop over circle's diameters array
+    circleCellsNames[i] = "circle#{circleD[i]}nm" # Define circle's cells names
+    circleCellsIdxs[i] = layout.add_cell(circleCellsNames[i]) # Define circle's cells indexes
+    circleCells[i] = layout.cell(circleCellsIdxs[i])  # Define circle's cells
+    # create circles as polygons with n segments
+    n = 64 # number of segments
+    r = circleD[i]/2 # radius
+    da = 2 * Math::PI / n
+    pts = n.times.collect{|i| Point.new(r * Math.cos(i*da), r * Math.sin(i*da))}
+    circleCells[i].shapes(layer1Idx).insert(Polygon.new(pts))
+    # circleCells[i].shapes(layer1Idx).insert(Box.new(0, 0, circleD[i], circleD[i])) # this is the command to make boxes instead of circles
+  end
+  
+  # create a line of circle's cell
+  lineOfcirclesCellIdx = layout.add_cell("lineOfcircles")
+  lineOfcirclesCell = layout.cell(lineOfcirclesCellIdx)
+  x = 0
+  0.upto(circleD.length-1) do |i|
+    t = RBA::Trans::new(x, 0)
+    lineOfcirclesCell.insert(CellInstArray.new(circleCellsIdxs[i], t))
+    if circleD[i+1]
+      x = x + circleD[i]/2 + gapx + circleD[i+1]/2
+    end     
+  end
+
+  # insert lines of circles's cells in the top cell
+  x, y, dx, dy, cols, rows  = 0, 0, 0, ( circleD[0] + gapy ), 1, lineN
+  topCell.insert(CellInstArray.new(lineOfcirclesCellIdx, Trans.new(x, y), Point.new(dx, 0), Point.new(0, dy), cols, rows))
+
+  # write circle diameter
+  textCellsNames = Array.new
+  textCellsIdxs = Array.new
+  textCells = Array.new
+  x = 0
+  0.upto(circleD.length-1) do |i|
+    # create a PCell variant cell (parameters are text, layer, font and magnification)
+    # here I use my font which is placed in second in the Instance→Basic library→
+    #TEXT cell→Font pulldown menu, which correspond to the font number 1
+    # set the font to 0 if you want to use the klayout standard font
+    textCells[i] = layout.add_pcell_variant(text_library, text_declaration.id, ["#{circleD[i]/1000} um", 1, layer1, 1.5])
+    # instantiate that cell in the top cell
+    t = Trans.new(1, mirr = false, x, 42000) # (angle, mirror, x translation, y translation) with angle in unit of 90°
+    textInst = layout.cell(topCellIdx).insert(CellInstArray::new(textCells[i], t))
+    if circleD[i+1]
+      x = x + circleD[i]/2 + gapx + circleD[i+1]/2
+    end     
+  end
+
+  # select top cell and fit to the window
+  layout_view.select_cell_path( [topCellIdx], 0 ) # Select a cell by cell index for a given cell view
+  layout_view.add_missing_layers # Add new layers to layer list
+  layout_view.update_content # Update the layout view to the current state
+  layout_view.zoom_fit # Fit the contents of the current view into the window
+  layout_view.max_hier # Select all hierarchy levels available
+  
+  # layout.write("C:/Users/Eric/Desktop/test.gds") # write to test.gds
+
+end
+
+</text>
+</klayout-macro>
