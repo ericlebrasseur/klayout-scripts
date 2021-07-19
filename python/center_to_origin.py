@@ -19,6 +19,7 @@ def adjustOriginCenter(layout,topcell):
   """
   adjust the cell origin to the center of the design
   """
+  import pya
   bbox= topcell.bbox()
   trans = pya.Trans.new(-bbox.center())
   for inst in layout.top_cell().each_inst():

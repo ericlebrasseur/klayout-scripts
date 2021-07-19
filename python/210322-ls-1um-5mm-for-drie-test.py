@@ -1,19 +1,6 @@
 import pya # import python module
-
-def adjustOriginCenter(layout,topcell):
-  """
-  adjust the cell origin to the center of the design
-  """
-  bbox= topcell.bbox()
-  trans = pya.Trans.new(-bbox.center())
-  for inst in layout.top_cell().each_inst():
-    layout.top_cell().transform(inst,trans)
-
-  for li in layout.layer_indices():
-    for shape in layout.top_cell().each_shape(li):
-      layout.top_cell().shapes(li).transform(shape,trans)
-      layout.update()
-  return(layout)
+import os
+from center_to_origin import adjustOriginCenter
 
 layout = pya.Layout() # create a layout
 top_cell = layout.create_cell("top") # create the top cell
@@ -56,5 +43,4 @@ for w in lines_w: # for each line width
   
 adjustOriginCenter(layout,top_cell)
 
-# export gds file
-layout.write("C:\\Users\\Eric\\gdrive\\it-app\\klayout\\python\\test.gds")
+layout.write(os.path.dirname(__file__)+"/test.gds")
